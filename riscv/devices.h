@@ -5,11 +5,14 @@
 #include "abstract_device.h"
 #include "abstract_interrupt_controller.h"
 #include "platform.h"
+#include "memif.h"
 #include <map>
 #include <queue>
 #include <vector>
 #include <utility>
 #include <cassert>
+#include <memory>
+
 
 class processor_t;
 class simif_t;
@@ -164,6 +167,56 @@ class ns16550_t : public abstract_device_t {
   int backoff_counter;
   static const int MAX_BACKOFF = 16;
 };
+
+
+//####################################################
+//---------- CRC16 class -----------------------
+//####################################################
+
+#define MIMO_BASE 0x50000000   // Define peripheral base address
+
+#define DIVISOR_REGISTER (MIMO_BASE)
+#define LENGTH_REGISTER (MIMO_BASE+0x04)
+#define DATA_REGISTER (MIMO_BASE+0x08)
+#define RESULT_REGISTER (MIMO_BASE+0x0C)
+#define CALC_REGISTER (MIMO_BASE+0xE)
+
+class CRC16 : public abstract_device_t {
+    public:
+        CRC16(memif_t& mem, sim_t *s, std::shared_ptr<plic_t> plic);
+        ~CRC16();
+
+        // Load the data found in the data register address
+        void loadData(uint8_t *target);
+
+        // Convert an integer into bytes and load them in an array to allow the peripheral to return them
+        template<typename T>
+        void convertToBytes(T value,  size_t len , uint8_t *bytes);
+
+        // I use the Boost library to calculate the CRC for the peripheral
+        // With 0xFFFF as initial value
+        void calculateCRC();
+
+        bool load(reg_t addr, size_t len, uint8_t* bytes);
+        bool store(reg_t addr, size_t len, const uint8_t* bytes);
+
+    private:
+        uint32_t divisor_register=8;
+        uint32_t length_register=0;
+        //uint32_t initial_value_register=600;
+        uint64_t data_register=0;
+        uint16_t result_register=0;
+        bool start_calc = false;
+        memif_t& mem;
+        sim_t *s;
+        std::shared_ptr<plic_t> plic;
+};
+
+//###################################################
+//###################################################
+
+
+
 
 template<typename T>
 void write_little_endian_reg(T* word, reg_t addr, size_t len, const uint8_t* bytes)

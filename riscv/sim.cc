@@ -3,6 +3,7 @@
 #include "config.h"
 #include "sim.h"
 #include "mmu.h"
+#include "memif.h"
 #include "dts.h"
 #include "remote_bitbang.h"
 #include "byteorder.h"
@@ -20,6 +21,8 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+
+//#include <cstdint>
 
 volatile bool ctrlc_pressed = false;
 static void handle_signal(int sig)
@@ -238,6 +241,15 @@ sim_t::sim_t(const cfg_t *cfg, bool halted,
                 << nprocs() << ").\n";
       exit(1);
   }
+
+  // Register peripheral
+  CRC16 *peripheral;
+  memif_t& mem = htif_t::memif();
+
+  peripheral = new CRC16(mem, this, plic); 
+  
+  bus.add_device(reg_t(MIMO_BASE), peripheral);
+
 }
 
 sim_t::~sim_t()
