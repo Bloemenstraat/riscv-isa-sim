@@ -135,13 +135,12 @@ CRC16::~CRC16() {
 
 // Load the data found in the data register address
 void CRC16::loadData(uint8_t *target) {
-    for (int i = 0; i < 15; i++) {
+    for (uint32_t i = 0; i < this->length_register; i++) {
         target[i] = this->s->from_target(mem.read_uint8((addr_t)this->data_register+i));
     }
-
 }
 
-// Convert an integer into bytes and load them in an array to allow the peripheral to return them
+// Convert an integer into bytes and load them in the bytes array to allow the peripheral to return them
 template<typename T>
 void CRC16::convertToBytes(T value,  size_t len , uint8_t *bytes) {
     for (size_t i = 0; i < len; i++) {
@@ -161,7 +160,7 @@ void CRC16::calculateCRC() {
     crc.process_bytes(message, this->length_register);
 
     this->result_register = crc.checksum();
-    this->plic->set_interrupt_level(5457, 1);
+    this->plic->set_interrupt_level(2, 1);
 }
 
 bool CRC16::load(reg_t addr, size_t len, uint8_t* bytes) {
